@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="计算巢是阿里云开放给企业应用服务商的服务管理平台。服务商能够在计算巢上发布私有化部署服务，为其客户提供云上软件一键部署的能力；同时也支持全托管模式的服务，赋能服务商托管其客户资源。">
+  <title>English - Aliyun 计算巢 x Gotify</title>
+
+  <link rel="shortcut icon" href="../img/favicon.ico">
+
+  <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css">
+  <link rel="stylesheet" href="../css/theme.css">
+  
+
+  
+
+  
+  
+
+  
+    <script src="../search/main.js"></script>
+  
+
+  
+
+  <script src="../js/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+
+<body>
+  <div class="container">
+    <div class="nav">
+      <div class="nav-inner">
+        <div class="logo">
+          <img src="./img/logo-2x.png">
+        </div>
+        <div class="nav-list">
+          <ul>
+          
+              <li><a href="#deploying-gotify-on-alibaba-cloud-compute-nest">Deploying Gotify on Alibaba Cloud Compute Nest</a></li>
+              
+                  <li><a href="#about-the-service">About the service</a></li>
+                  
+              
+                  <li><a href="#billing">Billing</a></li>
+                  
+              
+                  <li><a href="#required-ram-permissions">Required RAM permissions</a></li>
+                  
+              
+                  <li><a href="#deployment-steps">Deployment steps</a></li>
+                  
+              
+                  <li><a href="#first-steps">First steps</a></li>
+                  
+                      <li class="li-h3"><a href="#create-an-application-and-send-your-first-message">Create an application and send your first message</a></li>
+                  
+                      <li class="li-h3"><a href="#connect-clients">Connect clients</a></li>
+                  
+                      <li class="li-h3"><a href="#data-persistence">Data persistence</a></li>
+                  
+                      <li class="li-h3"><a href="#change-the-admin-password">Change the admin password</a></li>
+                  
+                      <li class="li-h3"><a href="#security-defaults">Security defaults</a></li>
+                  
+                      <li class="li-h3"><a href="#enable-oidc-single-sign-on">Enable OIDC single sign-on</a></li>
+                  
+              
+                  <li><a href="#parameters">Parameters</a></li>
+                  
+              
+                  <li><a href="#outputs">Outputs</a></li>
+                  
+              
+                  <li><a href="#security-notes">Security notes</a></li>
+                  
+              
+                  <li><a href="#troubleshooting">Troubleshooting</a></li>
+                  
+              
+                  <li><a href="#links">Links</a></li>
+                  
+              
+          
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="content theme-github">
+      
+      <div class="content-inner">        
+        
+        <h1 id="deploying-gotify-on-alibaba-cloud-compute-nest">Deploying Gotify on Alibaba Cloud Compute Nest</h1>
+<h2 id="about-the-service">About the service</h2>
+<p>Gotify is an MIT-licensed, self-hosted push notification server. It exposes a REST endpoint for sending messages, pushes them over WebSocket to a multi-user web console, and supports per-application tokens, message priorities and plugins. Scripts, monitoring, CI and IoT devices send notifications with an application token; the web console and the Android client receive them, and all data stays on your own server.</p>
+<p>This Compute Nest service deploys a single ECS instance. The image already contains Gotify and its Docker Compose runtime, and both messages and accounts live in a local SQLite database on the instance.</p>
+<p>Gotify is served on port 80 of the instance public IP. Opening the address shows the sign-in page; the username is always <code>admin</code> and the initial password is listed in the service instance outputs.</p>
+<h2 id="billing">Billing</h2>
+<p>Creating a service from this template is free. Running a service instance incurs:</p>
+<ul>
+<li>ECS instance (minimum 2 vCPU, 4 GiB memory)</li>
+<li>System disk (fixed at 200 GiB ESSD by the template)</li>
+<li>Public bandwidth (fixed at 5 Mbps by the template)</li>
+</ul>
+<p>Both pay-as-you-go and subscription are supported; the estimate is shown before you confirm the order.</p>
+<h2 id="required-ram-permissions">Required RAM permissions</h2>
+<p>If you create the instance with a RAM user, grant the following policies first.</p>
+<table>
+<thead>
+<tr>
+<th>Policy</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AliyunECSFullAccess</td>
+<td>Manage ECS instances</td>
+</tr>
+<tr>
+<td>AliyunVPCFullAccess</td>
+<td>Manage VPC resources</td>
+</tr>
+<tr>
+<td>AliyunROSFullAccess</td>
+<td>Manage Resource Orchestration Service stacks</td>
+</tr>
+<tr>
+<td>AliyunComputeNestUserFullAccess</td>
+<td>Manage Compute Nest user-side resources</td>
+</tr>
+</tbody>
+</table>
+<h2 id="deployment-steps">Deployment steps</h2>
+<ol>
+<li>Open the instance creation page, choose a region, and specify the instance type and instance password. You can create a new VPC or use an existing VPC and vSwitch.</li>
+</ol>
+<p><a href="https://computenest.console.aliyun.com/service/instance/create/cn-hangzhou?type=user&amp;ServiceId=service-72a1e942e6704966bccc">Deploy now</a></p>
+<p><img alt="Create a service instance" src="../create-instance.png" /></p>
+<ol>
+<li>
+<p>Review the price estimate, choose <strong>Next: Confirm Order</strong>, accept the service agreement and click <strong>Create Now</strong>.</p>
+</li>
+<li>
+<p>Wait for the deployment to finish. The <strong>Outputs</strong> section of the instance details page lists <code>gotify_80_url</code>, <code>AdminUsername</code> and <code>AdminPassword</code>, plus notes on message sending, security defaults, data persistence and single sign-on that are worth reading.</p>
+</li>
+<li>
+<p>Open the URL from the outputs (<code>http://&lt;public-ip&gt;</code>), sign in as <code>admin</code> with the generated password and reach the console.</p>
+</li>
+</ol>
+<h2 id="first-steps">First steps</h2>
+<h3 id="create-an-application-and-send-your-first-message">Create an application and send your first message</h3>
+<p>Open <strong>APPS</strong> and click <strong>CREATE APPLICATION</strong> (for example <code>nightly-backup</code>) to get a push token for that application. Then run this from any machine that can reach the instance:</p>
+<pre><code class="language-bash">curl &quot;http://&lt;public-ip&gt;/message?token=&lt;app-token&gt;&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;title&quot;:&quot;Backup finished&quot;,&quot;message&quot;:&quot;nightly-backup completed at 02:00 in 3m12s&quot;,&quot;priority&quot;:5}'
+</code></pre>
+<p>The token can also be sent in the <code>X-Gotify-Key</code> header. The console receives the message over WebSocket in real time.</p>
+<p><img alt="Gotify message console" src="../app.png" /></p>
+<h3 id="connect-clients">Connect clients</h3>
+<p>The official Gotify Android client can be pointed at the instance URL plus an application token. The console supports multiple users, so you can add team accounts under <strong>USERS</strong> and keep the admin account separate.</p>
+<h3 id="data-persistence">Data persistence</h3>
+<p>All state lives in <code>/opt/gotify/data</code> on the system disk (the SQLite file <code>gotify.db</code> plus the <code>images</code> and <code>plugins</code> directories). <code>docker compose down</code> and container rebuilds keep the data; releasing the instance deletes it, so back up that directory regularly. In SQLite mode the upstream project caps the open connection count at 1, so write operations are serialized; watch disk headroom and write latency when message volume is high.</p>
+<h3 id="change-the-admin-password">Change the admin password</h3>
+<p><code>GOTIFY_DEFAULTUSER_PASS</code> only applies when the database is first created; editing it later or redeploying does not override an existing account. To change the password, sign in and use the user menu. To reset to a fresh account, run <code>cd /opt/gotify &amp;&amp; docker compose down</code> on the instance, clear <code>/opt/gotify/data</code>, then <code>docker compose up -d</code> (all history is lost).</p>
+<h3 id="security-defaults">Security defaults</h3>
+<p>Public registration is disabled, local authentication stays on, server-side TLS is off and the session cookie is not marked Secure (required for plain HTTP delivery). The container runs unprivileged with capability dropping and <code>no-new-privileges</code>, and the host Docker socket is not mounted. To enable registration, edit <code>/opt/gotify/.env</code> and run <code>cd /opt/gotify &amp;&amp; docker compose up -d</code>; exposing registration publicly lets any visitor create an account and is not recommended.</p>
+<h3 id="enable-oidc-single-sign-on">Enable OIDC single sign-on</h3>
+<p>OIDC support is built in (<code>GOTIFY_OIDC_ENABLED</code>, false by default) and works with providers such as Authelia, Dex and Keycloak. The provider must support PKCE and the callback address must end with <code>/auth/oidc/callback</code>. Once enabled, the IdP group claim takes over admin rights on every sign-in and overrides manual changes, so evaluate this before turning it on.</p>
+<h2 id="parameters">Parameters</h2>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VpcOption</td>
+<td>Create a new VPC or reuse an existing one</td>
+<td>NewVPC</td>
+</tr>
+<tr>
+<td>VpcCidrBlock</td>
+<td>CIDR block of the new VPC</td>
+<td>192.168.0.0/16</td>
+</tr>
+<tr>
+<td>VSwitchCidrBlock</td>
+<td>CIDR block of the new vSwitch</td>
+<td>192.168.1.0/24</td>
+</tr>
+<tr>
+<td>EcsInstanceType</td>
+<td>ECS instance type, 2–4 vCPU ecs.u1 / ecs.e families</td>
+<td>none</td>
+</tr>
+<tr>
+<td>InstancePassword</td>
+<td>Password for the ECS instance</td>
+<td>none</td>
+</tr>
+<tr>
+<td>PayType</td>
+<td>Billing method</td>
+<td>PostPaid</td>
+</tr>
+<tr>
+<td>ZoneId</td>
+<td>Availability zone</td>
+<td>none</td>
+</tr>
+<tr>
+<td>VpcId / VSwitchId</td>
+<td>Existing VPC and vSwitch (when reusing a VPC)</td>
+<td>empty</td>
+</tr>
+</tbody>
+</table>
+<h2 id="outputs">Outputs</h2>
+<table>
+<thead>
+<tr>
+<th>Output</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gotify_80_url</td>
+<td>Gotify URL (port 80)</td>
+</tr>
+<tr>
+<td>AdminUsername</td>
+<td>Admin username (<code>admin</code>)</td>
+</tr>
+<tr>
+<td>AdminPassword</td>
+<td>Generated admin password</td>
+</tr>
+<tr>
+<td>QuickStartGuide / PushMessageUsage</td>
+<td>Sign-in and message sending notes</td>
+</tr>
+<tr>
+<td>SecurityDefaultsNote / HttpDeliveryNote</td>
+<td>Factory security defaults and plain HTTP limits</td>
+</tr>
+<tr>
+<td>DataPersistenceNote / PasswordChangeNote</td>
+<td>Data persistence and password change notes</td>
+</tr>
+<tr>
+<td>SsoCapabilityNote</td>
+<td>OIDC single sign-on notes</td>
+</tr>
+</tbody>
+</table>
+<h2 id="security-notes">Security notes</h2>
+<ul>
+<li>The instance is delivered over plain HTTP on a public IP without a domain or TLS. If you put a TLS reverse proxy in front, also set <code>GOTIFY_SERVER_SECURECOOKIE</code> to true and list the proxy in <code>GOTIFY_SERVER_TRUSTEDPROXIES</code>, otherwise the real client IP is lost; make sure WebSocket upgrades are not truncated.</li>
+<li>An application token grants send rights for that application. Do not embed it in front-end code or public repositories.</li>
+<li>For an internet-facing push server, restrict source IPs where possible and review the USERS and APPS lists regularly.</li>
+<li>All data lives under <code>/opt/gotify/data</code> on the system disk and is deleted with the instance.</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<p><strong>Sign-in says the username or password is wrong.</strong> The username is <code>admin</code> and the password is the <code>AdminPassword</code> output value (or the password you changed it to). A reused data directory keeps its old password.</p>
+<p><strong>curl returns 401 or 403.</strong> 401 means the application token is wrong or deleted; check it on the APPS page. 403 usually means the path is wrong: send to <code>/message?token=&lt;token&gt;</code> or use the <code>X-Gotify-Key</code> header.</p>
+<p><strong>No real-time messages in the console.</strong> WebSocket needs a direct connection to the instance; if a reverse proxy sits in between, make sure it allows the WebSocket upgrade.</p>
+<h2 id="links">Links</h2>
+<ul>
+<li>Source code: https://github.com/gotify/server</li>
+<li>Documentation: https://gotify.net/docs</li>
+<li>License: MIT</li>
+</ul>
+        
+      </div>
+
+      <div class="copyrights">© 2009-2022 Aliyun.com 版权所有</div>
+    </div>
+  </div>
+  
+  <!--
+  MkDocs version      : 1.6.1
+  Docs Build Date UTC : 2026-11-25 10:11:04.262720+00:00
+  -->
+</body>
+</html>
